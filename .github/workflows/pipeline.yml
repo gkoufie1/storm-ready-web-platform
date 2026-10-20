@@ -1,0 +1,178 @@
+name: Storm-Ready Platform Pipeline
+
+# Validation runs on every PR and push. Deploys are manual (workflow_dispatch)
+# so a merge never silently starts paying for infrastructure — but once
+# started, a deploy always goes staging → smoke test → approval → prod.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "apply or destroy"
+        type: choice
+        options: [apply, destroy]
+        default: apply
+      target:
+        description: "staging only, or staging then prod"
+        type: choice
+        options: [staging, staging-and-prod]
+        default: staging
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false # never cancel a running apply
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  TF_VERSION: "1.10.5"
+  AWS_REGION: us-east-1
+  TF_IN_AUTOMATION: "true"
+  TF_VAR_admin_allowed_cidrs: ${{ vars.ADMIN_ALLOWED_CIDRS }}         # e.g. ["203.0.113.10/32"]
+  TF_VAR_rate_limit_exempt_cidrs: ${{ vars.RATE_LIMIT_EXEMPT_CIDRS || '[]' }}
+  TF_VAR_alert_email: ${{ vars.ALERT_EMAIL }}
+
+jobs:
+
+  # ── Validate: fmt, validate, policy scan, Lambda unit tests ──
+  validate:
+    name: Validate & Policy Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform fmt
+        run: terraform fmt -check -recursive
+
+      - name: Terraform validate (staging, prod)
+        run: |
+          for env in staging prod; do
+            terraform -chdir=envs/$env init -backend=false -input=false
+            terraform -chdir=envs/$env validate
+          done
+
+      - name: Checkov policy scan
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: .
+          config_file: .checkov.yaml
+          soft_fail: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Emergency Mode Lambda unit tests
+        working-directory: lambda/emergency_mode
+        run: |
+          pip install --quiet boto3
+          python -m unittest -v
+
+  # ── Staging ──
+  staging:
+    name: Staging (${{ inputs.action }})
+    if: github.event_name == 'workflow_dispatch'
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: staging
+    defaults:
+      run:
+        working-directory: envs/staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - run: terraform init -input=false
+
+      - name: Terraform ${{ inputs.action }}
+        run: |
+          if [ "${{ inputs.action }}" = "destroy" ]; then
+            terraform destroy -auto-approve -input=false
+          else
+            terraform apply -auto-approve -input=false
+          fi
+
+      - uses: actions/setup-python@v5
+        if: inputs.action == 'apply'
+        with:
+          python-version: "3.13"
+
+      # The site_url can take a few minutes to start serving after a fresh
+      # distribution is created, so retry before declaring failure.
+      - name: Smoke test
+        if: inputs.action == 'apply'
+        run: |
+          SITE=$(terraform output -raw site_url)
+          ALB=$(terraform output -raw alb_dns_name)
+          for attempt in 1 2 3 4 5 6; do
+            python ../../scripts/smoke_test.py --site-url "$SITE" --alb-dns "$ALB" && exit 0
+            echo "Attempt $attempt failed; retrying in 60s"; sleep 60
+          done
+          exit 1
+
+  # ── Production: requires a reviewer on the 'production' environment ──
+  prod:
+    name: Production (${{ inputs.action }})
+    if: github.event_name == 'workflow_dispatch' && inputs.target == 'staging-and-prod'
+    needs: staging
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: envs/prod
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - run: terraform init -input=false
+
+      - name: Terraform ${{ inputs.action }}
+        run: |
+          if [ "${{ inputs.action }}" = "destroy" ]; then
+            terraform destroy -auto-approve -input=false
+          else
+            terraform apply -auto-approve -input=false
+          fi
+
+      - uses: actions/setup-python@v5
+        if: inputs.action == 'apply'
+        with:
+          python-version: "3.13"
+
+      - name: Smoke test
+        if: inputs.action == 'apply'
+        run: |
+          SITE=$(terraform output -raw site_url)
+          ALB=$(terraform output -raw alb_dns_name)
+          for attempt in 1 2 3 4 5 6; do
+            python ../../scripts/smoke_test.py --site-url "$SITE" --alb-dns "$ALB" && exit 0
+            echo "Attempt $attempt failed; retrying in 60s"; sleep 60
+          done
+          exit 1

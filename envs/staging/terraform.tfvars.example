@@ -1,0 +1,11 @@
+# Copy to terraform.tfvars (gitignored) and fill in.
+# Include BOTH your IPv4 address and your IPv6 /64 — browsers prefer IPv6,
+# so an IPv4-only list locks you out of wp-admin.
+#   curl -4 https://checkip.amazonaws.com   → 203.0.113.10       → "203.0.113.10/32"
+#   curl -6 https://ifconfig.co             → 2001:db8:a:b:...   → "2001:db8:a:b::/64"
+admin_allowed_cidrs = ["203.0.113.10/32", "2001:db8:a:b::/64"]
+
+# The machine you run k6 from, so the WAF rate limit doesn't block your own load test.
+rate_limit_exempt_cidrs = ["203.0.113.10/32", "2001:db8:a:b::/64"]
+
+alert_email = ""

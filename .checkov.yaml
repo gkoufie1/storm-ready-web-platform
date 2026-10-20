@@ -1,0 +1,51 @@
+# Every skip is a deliberate, documented decision — not a silenced warning.
+# Two kinds:
+#   [N/A]      the check doesn't apply to this design, or is a false positive
+#   [ROADMAP]  real production hardening, deferred to keep the demo inside a
+#              small budget; listed in README "Production hardening roadmap"
+framework: terraform
+quiet: true
+compact: true
+skip-check:
+  # ── N/A / false positives ──
+  - CKV_AWS_260    # [N/A] ingress is the CloudFront prefix list / ALB SG reference, never 0.0.0.0/0
+  - CKV2_AWS_47    # [N/A] Log4j AMR is covered — KnownBadInputsRuleSet is attached via a dynamic block Checkov can't evaluate
+  - CKV2_AWS_28    # [N/A] the ALB only accepts CloudFront traffic; WAF sits on CloudFront in front of it
+  - CKV_AWS_305    # [N/A] default root object would rewrite "/" for the WordPress origin too
+  - CKV_AWS_374    # [N/A] a public agency site must stay reachable from anywhere
+  - CKV2_AWS_19    # [N/A] the EIP is attached to the NAT gateway, not an EC2 instance
+  - CKV2_AWS_34    # [N/A] emergency-mode state parameter holds no secrets
+  - CKV2_AWS_57    # [N/A] WordPress salts are not credentials; rotating them just logs everyone out
+  - CKV_AWS_336    # [N/A] the official WordPress image writes to its docroot at startup
+  - CKV_AWS_111    # [N/A] Application Auto Scaling + X-Ray have no resource-level permissions
+  - CKV_AWS_356    # [N/A] same as above
+  - CKV_AWS_117    # [N/A] the emergency Lambda only calls AWS APIs; a VPC adds NAT cost and a failure mode
+  - CKV_AWS_116    # [N/A] SNS invocations retry on failure and the alarm re-fires; manual calls are synchronous
+  - CKV_AWS_115    # [N/A] reserved concurrency can fail on new accounts with a 10-concurrency quota
+  - CKV_AWS_272    # [N/A] code is deployed only by the pipeline from this repo
+  - CKV_AWS_326    # [N/A] Aurora backtracking is not supported on Serverless v2
+  - CKV2_AWS_62    # [N/A] nothing consumes events from these buckets
+  - CKV_AWS_144    # [N/A] failover snapshot is regenerated on demand; state bucket is versioned
+
+  # ── ROADMAP: production hardening ──
+  - CKV_AWS_2      # [ROADMAP] HTTPS CloudFront→ALB needs a custom domain + ACM cert on the ALB
+  - CKV_AWS_103    # [ROADMAP] same
+  - CKV2_AWS_20    # [ROADMAP] same
+  - CKV_AWS_378    # [ROADMAP] same (ALB→task HTTPS needs TLS in the container)
+  - CKV_AWS_86     # [ROADMAP] CloudFront standard logs to S3
+  - CKV_AWS_91     # [ROADMAP] ALB access logs to S3
+  - CKV2_AWS_31    # [ROADMAP] WAF logging to CloudWatch / Firehose
+  - CKV_AWS_18     # [ROADMAP] S3 server access logging
+  - CKV_AWS_145    # [ROADMAP] customer-managed KMS keys (SSE-S3 / AWS-managed keys today)
+  - CKV_AWS_149    # [ROADMAP] same
+  - CKV_AWS_158    # [ROADMAP] same
+  - CKV_AWS_173    # [ROADMAP] same
+  - CKV_AWS_184    # [ROADMAP] same
+  - CKV_AWS_327    # [ROADMAP] same
+  - CKV_AWS_26     # [ROADMAP] SNS encryption — CloudWatch alarms require a CMK, not the AWS-managed key
+  - CKV_AWS_338    # [ROADMAP] 1-year log retention (30 days in the demo)
+  - CKV2_AWS_8     # [ROADMAP] AWS Backup plan with cross-region copy (Aurora automated backups today)
+  - CKV_AWS_162    # [ROADMAP] IAM DB auth — WordPress only supports password auth natively
+  - CKV_AWS_118    # [ROADMAP] RDS enhanced monitoring
+  - CKV_AWS_353    # [ROADMAP] Performance Insights
+  - CKV_AWS_65     # [ROADMAP] Container Insights (variable, off by default for cost)
