@@ -79,7 +79,7 @@ jobs:
 
   # ── Staging ──
   staging:
-    name: Staging (${{ inputs.action }})
+    name: Staging
     if: github.event_name == 'workflow_dispatch'
     needs: validate
     runs-on: ubuntu-latest
@@ -130,7 +130,7 @@ jobs:
 
   # ── Production: requires a reviewer on the 'production' environment ──
   prod:
-    name: Production (${{ inputs.action }})
+    name: Production
     if: github.event_name == 'workflow_dispatch' && inputs.target == 'staging-and-prod'
     needs: staging
     runs-on: ubuntu-latest
