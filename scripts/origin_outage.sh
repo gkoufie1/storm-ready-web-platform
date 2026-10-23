@@ -26,7 +26,7 @@ case "$ACTION" in
     set_suspended true
     aws ecs update-service --cluster "$CLUSTER" --service "$SERVICE" --desired-count 0 >/dev/null
     echo "CMS stopping. Within ~30s the ALB returns 503 and CloudFront serves the S3 snapshot."
-    echo "Cached pages keep serving from the edge; to force an origin fetch, add a query string (/?v=\$RANDOM)."
+    echo "Cached pages keep serving from the edge; to force an origin fetch, open /?s=outage-\$RANDOM (a new search term)."
     ;;
   end)
     MIN=$(aws application-autoscaling describe-scalable-targets \

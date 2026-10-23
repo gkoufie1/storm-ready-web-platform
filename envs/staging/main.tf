@@ -28,6 +28,7 @@ module "platform" {
 
   admin_allowed_cidrs     = var.admin_allowed_cidrs
   rate_limit_exempt_cidrs = var.rate_limit_exempt_cidrs
+  loadtest_token          = var.loadtest_token
   alert_email             = var.alert_email
 
   aliases             = var.custom_domain == "" ? [] : [var.custom_domain]

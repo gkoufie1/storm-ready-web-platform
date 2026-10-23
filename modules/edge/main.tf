@@ -144,7 +144,10 @@ resource "aws_cloudfront_cache_policy" "public" {
       header_behavior = "none"
     }
     query_strings_config {
-      query_string_behavior = "all"
+      query_string_behavior = "whitelist"
+      query_strings {
+        items = var.cache_query_strings
+      }
     }
   }
 

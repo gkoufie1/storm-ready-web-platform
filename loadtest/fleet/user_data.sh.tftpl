@@ -1,0 +1,23 @@
+#!/bin/bash
+# Prepares a load generator: installs k6, drops in the test script, tunes the
+# network stack for many concurrent connections, then marks itself ready.
+set -euxo pipefail
+
+dnf install -y tar gzip
+
+curl -fsSL "https://github.com/grafana/k6/releases/download/v${k6_version}/k6-v${k6_version}-linux-arm64.tar.gz" \
+  | tar -xz -C /tmp
+install -m 0755 "/tmp/k6-v${k6_version}-linux-arm64/k6" /usr/local/bin/k6
+
+mkdir -p /opt/loadtest
+echo '${script_b64}' | base64 -d > /opt/loadtest/arrival.js
+
+cat > /etc/sysctl.d/99-loadtest.conf <<'EOF'
+net.ipv4.ip_local_port_range = 1024 65535
+net.ipv4.tcp_tw_reuse = 1
+net.core.somaxconn = 65535
+fs.file-max = 2097152
+EOF
+sysctl --system
+
+touch /opt/loadtest/ready

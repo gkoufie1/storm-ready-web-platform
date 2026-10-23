@@ -31,7 +31,7 @@ Total AWS cost for one session: a few dollars. Destroy afterwards.
 | 0:50 | CloudWatch: surge alarm fires → Emergency Mode turns on by itself; task count rises | "The platform noticed and switched itself into Emergency Mode." |
 | 1:30 | Browser: site is still fast | "Residents still get the page in milliseconds — almost all from the edge." |
 | 1:50 | Terminal: `scripts/origin_outage.sh staging start` | "Now the worst case: we take the CMS down completely." |
-| 2:10 | Browser: open `<site_url>/?v=123` (query string forces a fresh origin fetch) — page loads with the "saved copy" banner | "CloudFront fails over to the static copy. No error page, ever." |
+| 2:10 | Browser: open `<site_url>/?s=outage-123` (a new search term forces a fresh origin fetch; other query strings are ignored by the cache) — page loads with the "saved copy" banner | "CloudFront fails over to the static copy. No error page, ever." |
 | 2:30 | k6 summary: `http_req_failed` < 1%, p95 latency | "Final numbers: X requests, Y% errors, p95 Z ms." |
 | 2:45 | `scripts/emergency.sh staging off` | "Storm passes. One command returns to normal cost." |
 

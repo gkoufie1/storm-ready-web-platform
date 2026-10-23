@@ -72,6 +72,12 @@ variable "rate_limit_exempt_cidrs" {
   default = []
 }
 
+variable "loadtest_token" {
+  type      = string
+  default   = ""
+  sensitive = true
+}
+
 variable "aliases" {
   type    = list(string)
   default = []

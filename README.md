@@ -80,7 +80,7 @@ modules/
   emergency/            Emergency Mode Lambda, state parameter, surge alarm
 lambda/emergency_mode/  Lambda source + unit tests
 scripts/                snapshot crawler, emergency switch, outage drill, smoke test
-loadtest/               k6 surge test
+loadtest/               k6 surge test (laptop) + fleet/ for the 1M req/min distributed test
 docs/DEMO_RUNBOOK.md    step-by-step for recording the demo
 ```
 

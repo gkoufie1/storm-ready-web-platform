@@ -28,7 +28,7 @@ if ($Action -eq "start") {
     aws ecs update-service --cluster $cluster --service $service --desired-count 0 | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "update-service failed" }
     Write-Host "CMS stopping. Within ~30-60s the ALB returns 503 and CloudFront serves the S3 snapshot."
-    Write-Host "Cached pages keep serving from the edge; add a query string (/?v=123) to force an origin fetch."
+    Write-Host "Cached pages keep serving from the edge; open /?s=outage-123 (a new search term) to force an origin fetch."
 }
 else {
     $min = aws application-autoscaling describe-scalable-targets `

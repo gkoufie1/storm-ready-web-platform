@@ -199,6 +199,26 @@ resource "aws_wafv2_web_acl" "this" {
                     arn = aws_wafv2_ip_set.this["rate-exempt-v6"].arn
                   }
                 }
+                # A distributed load-test fleet has many changing IPs; it
+                # identifies itself with a shared token instead.
+                dynamic "statement" {
+                  for_each = nonsensitive(var.rate_limit_exempt_token == "") ? [] : [1]
+                  content {
+                    byte_match_statement {
+                      search_string         = var.rate_limit_exempt_token
+                      positional_constraint = "EXACTLY"
+                      field_to_match {
+                        single_header {
+                          name = "x-loadtest-token"
+                        }
+                      }
+                      text_transformation {
+                        priority = 0
+                        type     = "NONE"
+                      }
+                    }
+                  }
+                }
               }
             }
           }

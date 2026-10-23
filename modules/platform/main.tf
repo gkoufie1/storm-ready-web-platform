@@ -69,6 +69,7 @@ module "edge" {
   normal_ttl              = var.baseline.ttl
   admin_allowed_cidrs     = var.admin_allowed_cidrs
   rate_limit_exempt_cidrs = var.rate_limit_exempt_cidrs
+  rate_limit_exempt_token = var.loadtest_token
   aliases                 = var.aliases
   acm_certificate_arn     = var.acm_certificate_arn
 }

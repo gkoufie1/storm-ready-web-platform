@@ -43,6 +43,23 @@ variable "rate_limit_exempt_cidrs" {
   default     = []
 }
 
+variable "rate_limit_exempt_token" {
+  description = "Shared secret a load-test fleet sends as X-Loadtest-Token to bypass the per-IP rate limit. Empty disables the bypass."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "cache_query_strings" {
+  description = <<-EOT
+    Query-string parameters that select different content (search, paging, post IDs).
+    Everything else (fbclid, utm_*, gclid, cache-busters) is ignored, so a link
+    shared on social media still hits the edge cache instead of the CMS.
+  EOT
+  type        = list(string)
+  default     = ["s", "p", "page_id", "paged", "cat", "tag"]
+}
+
 variable "price_class" {
   description = "PriceClass_100 = US/Canada/Europe edges, enough for a state agency audience."
   type        = string

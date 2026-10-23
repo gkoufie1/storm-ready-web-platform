@@ -56,7 +56,7 @@ export const options = {
 export default function () {
   let path = PATHS[Math.floor(Math.random() * PATHS.length)];
   if (SCENARIO === 'bust') {
-    path += (path.includes('?') ? '&' : '?') + `nocache=${__VU}-${__ITER}-${Date.now()}`;
+    path = `/?s=bust-${__VU}-${__ITER}-${Date.now()}`;
   }
 
   const res = http.get(`${BASE_URL}${path}`, { tags: { page: path.split('?')[0] } });

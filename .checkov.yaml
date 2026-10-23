@@ -6,6 +6,10 @@
 framework: terraform
 quiet: true
 compact: true
+# The load-test fleet is throwaway test tooling (destroyed after each run),
+# not part of the hosted platform, so it is not held to the platform baseline.
+skip-path:
+  - loadtest[/\\]fleet
 skip-check:
   # ── N/A / false positives ──
   - CKV_AWS_260    # [N/A] ingress is the CloudFront prefix list / ALB SG reference, never 0.0.0.0/0

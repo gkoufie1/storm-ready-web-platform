@@ -19,3 +19,10 @@ variable "custom_domain" {
   type        = string
   default     = ""
 }
+
+variable "loadtest_token" {
+  description = "Shared secret the distributed load-test fleet sends to bypass the WAF per-IP rate limit. Leave empty unless a test is planned."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
