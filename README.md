@@ -100,7 +100,8 @@ cp envs/staging/terraform.tfvars.example envs/staging/terraform.tfvars
 # 3. Deploy (~15 min, mostly CloudFront)
 cd envs/staging && terraform init && terraform apply
 
-# 4. Install WordPress: open <site_url>/wp-admin/install.php
+# 4. Install WordPress and create the demo pages (prints the admin login once)
+python ../../scripts/seed_demo_content.py --env staging --email you@example.org
 
 # 5. Smoke test, then take the first failover snapshot
 python ../../scripts/smoke_test.py --site-url $(terraform output -raw site_url) \

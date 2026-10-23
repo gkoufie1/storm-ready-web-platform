@@ -6,9 +6,9 @@ Total AWS cost for one session: a few dollars. Destroy afterwards.
 ## Before recording (≈30 min)
 
 1. `terraform apply` in `envs/staging` (≈15 min).
-2. Install WordPress at `<site_url>/wp-admin/install.php`. Create a few
-   pages that look like an agency site: *Evacuation Routes*, *Shelter
-   Locations*, *Road Closures*, *Contact*.
+2. Seed the site (installs WordPress, creates the agency pages, sets the
+   options): `python scripts/seed_demo_content.py --env staging --email <you>`.
+   Save the administrator login it prints.
 3. Snapshot the site:
    `python scripts/snapshot_site.py --base-url <site_url> --bucket <failover_bucket>`
 4. Run `python scripts/smoke_test.py ...` — all PASS.
@@ -56,3 +56,34 @@ scripts/origin_outage.sh staging end
 scripts/emergency.sh staging off
 cd envs/staging && terraform destroy
 ```
+
+## Teardown and rebuild
+
+Staging costs about $2/day while it runs. Destroy it between demos and
+rebuild in about 20 minutes.
+
+**Before destroying (once):**
+- In GoDaddy, set the `demo` CNAME's TTL to the minimum (600 s), so the new
+  CloudFront address takes effect quickly on rebuild.
+- Optional: export any content you added beyond the seeded pages
+  (WordPress → Tools → Export). The seed script recreates the standard pages.
+
+**Destroy (10–20 min, mostly CloudFront):**
+```powershell
+cd envs\staging
+terraform destroy
+```
+The certificate and Terraform state live in `bootstrap/` and survive.
+The WordPress database and uploads do not.
+
+**Rebuild (~20 min):**
+```powershell
+cd envs\staging
+terraform apply                                   # ~15 min
+terraform output cloudfront_domain                # put this in the GoDaddy `demo` CNAME
+python ..\..\scripts\seed_demo_content.py --env staging --email <you>
+python ..\..\scripts\snapshot_site.py --base-url https://demo.epixdevo.org --bucket (terraform output -raw failover_bucket)
+python ..\..\scripts\smoke_test.py --site-url https://demo.epixdevo.org --alb-dns (terraform output -raw alb_dns_name)
+```
+`apply` can fail with `CNAMEAlreadyExists` if the old distribution is still
+being deleted; wait a few minutes and run it again.
