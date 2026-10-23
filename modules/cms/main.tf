@@ -312,6 +312,10 @@ locals {
   # and pin its URLs to the public domain rather than the ALB hostname.
   wp_config_extra = <<-PHP
     $_SERVER['HTTPS'] = 'on';
+    // Admin paths reach the origin without the viewer's Host header (it would
+    // break the S3 failover origin), so WordPress would otherwise build
+    // redirects — e.g. after login — pointing at the private ALB hostname.
+    $_SERVER['HTTP_HOST'] = '${var.site_domain}';
     define('WP_HOME', 'https://${var.site_domain}');
     define('WP_SITEURL', 'https://${var.site_domain}');
     define('DISALLOW_FILE_EDIT', true);
