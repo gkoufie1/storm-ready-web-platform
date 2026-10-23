@@ -41,8 +41,36 @@ requests/minute without degradation) and III.3.4 (scaling within 45 minutes).
 - **Ramp absorbed without errors:** the test ramped from 2% of target to the
   full 1.08M/min over 2 minutes (a shape chosen by the test, not a platform
   limit), and the platform served it with zero failed requests.
-- **Emergency Mode / origin scaling timing (SOW 3.4):** _to be confirmed from
-  the Emergency Mode state parameter and ECS scaling events — pending._
+- **Origin load:** only **142** of 12,459,444 requests reached the CMS origin
+  (ALB `RequestCount`, 17:30–17:55) — an edge cache hit rate of **99.999%**.
+
+## Emergency Mode timeline (SOW 3.4)
+
+| Time (UTC) | Event | Source |
+|---|---|---|
+| 17:34 | Test traffic begins (above the 3,000/min staging alarm threshold) | CloudFront `Requests` |
+| 17:40:46 | Surge alarm enters ALARM | CloudWatch alarm history |
+| 17:40:48 | **Emergency Mode applied automatically** (`requested_by: alarm:storm-ready-staging-traffic-surge`): tasks min 3 / max 12, Aurora 1–8 ACU, cache TTL floor 300 s | SSM parameter history |
+| 17:41 | Healthy web tasks 1 → **3** | ALB `HealthyHostCount` |
+| 17:55:05 | Emergency Mode turned off manually by an operator | SSM parameter history |
+| 18:00:46 | Alarm returns to OK; Emergency Mode correctly did **not** turn itself off | CloudWatch alarm history |
+
+- **Trigger → Emergency Mode applied:** 2 seconds.
+- **Trigger → added capacity serving traffic:** ≈70 seconds (within the 17:41 metric minute).
+- **Both trigger paths exercised:** automatic (alarm, on) and manual (operator, off).
+- **Requirement:** scaling completes within 45 minutes once initiated — met with wide margin.
+
+**Known limitation and fix:** the alarm fired ~6 minutes after traffic first
+crossed the threshold, because CloudFront publishes metrics to CloudWatch with
+a few minutes' delay. Planned improvement: add a second trigger on the ALB's
+1-minute request metrics so detection is near-real-time.
+
+## Caveat on origin capacity
+
+Because 99.999% of requests were served from the edge, this test proves the
+delivery path at 1M+ requests/minute, not the CMS origin at that volume.
+Uncached traffic (e.g. searches) is absorbed by Emergency Mode's pre-staged
+origin capacity and by the static failover copy if the origin is saturated.
 - **Cross-check:** CloudFront counted 12,459,444 requests (17:30–17:49) vs.
   k6's 12,459,415 — within 29 requests (manual spot checks during the run).
 
