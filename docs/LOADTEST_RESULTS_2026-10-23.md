@@ -38,7 +38,11 @@ requests/minute without degradation) and III.3.4 (scaling within 45 minutes).
 - **Peak:** 1,080,017 requests/minute
 - **Sustained:** above 1,000,000 requests/minute for **10 consecutive minutes** (17:38–17:47)
 - **5xx error rate (max, any minute):** 0.0%
-- **Baseline → above 1M requests/minute:** ~4 minutes (requirement: 45 minutes)
+- **Ramp absorbed without errors:** the test ramped from 2% of target to the
+  full 1.08M/min over 2 minutes (a shape chosen by the test, not a platform
+  limit), and the platform served it with zero failed requests.
+- **Emergency Mode / origin scaling timing (SOW 3.4):** _to be confirmed from
+  the Emergency Mode state parameter and ECS scaling events — pending._
 - **Cross-check:** CloudFront counted 12,459,444 requests (17:30–17:49) vs.
   k6's 12,459,415 — within 29 requests (manual spot checks during the run).
 

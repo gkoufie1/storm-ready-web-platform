@@ -315,6 +315,9 @@ locals {
     define('WP_HOME', 'https://${var.site_domain}');
     define('WP_SITEURL', 'https://${var.site_domain}');
     define('DISALLOW_FILE_EDIT', true);
+    // Core lives in the image, not on EFS: an in-place update would apply to
+    // one task only and vanish on restart. Core updates ship as a new image.
+    define('WP_AUTO_UPDATE_CORE', false);
     define('FORCE_SSL_ADMIN', true);
   PHP
 }

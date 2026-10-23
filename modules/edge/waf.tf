@@ -169,6 +169,93 @@ resource "aws_wafv2_web_acl" "this" {
     }
   }
 
+  # 2b. Information disclosure: WordPress lists usernames via the REST API
+  #     and ?author=N redirects, and readme.html reveals the core version.
+  #     Attackers use both to target login and known vulnerabilities.
+  rule {
+    name     = "block-enumeration"
+    priority = 3
+
+    action {
+      block {}
+    }
+
+    statement {
+      and_statement {
+        statement {
+          or_statement {
+            dynamic "statement" {
+              for_each = {
+                "/wp-json/wp/v2/users" = "STARTS_WITH"
+                "/readme.html"         = "EXACTLY"
+                "/license.txt"         = "EXACTLY"
+              }
+              content {
+                byte_match_statement {
+                  search_string         = statement.key
+                  positional_constraint = statement.value
+                  field_to_match {
+                    uri_path {}
+                  }
+                  text_transformation {
+                    priority = 0
+                    type     = "LOWERCASE"
+                  }
+                }
+              }
+            }
+            # ?author=1 and ?rest_route=/wp/v2/users (incl. URL-encoded forms)
+            dynamic "statement" {
+              for_each = ["author=", "rest_route=/wp/v2/users"]
+              content {
+                byte_match_statement {
+                  search_string         = statement.value
+                  positional_constraint = "CONTAINS"
+                  field_to_match {
+                    query_string {}
+                  }
+                  text_transformation {
+                    priority = 0
+                    type     = "URL_DECODE"
+                  }
+                  text_transformation {
+                    priority = 1
+                    type     = "LOWERCASE"
+                  }
+                }
+              }
+            }
+          }
+        }
+        # Editors on the admin allow-list can still use these.
+        statement {
+          not_statement {
+            statement {
+              or_statement {
+                statement {
+                  ip_set_reference_statement {
+                    arn = aws_wafv2_ip_set.this["admin-v4"].arn
+                  }
+                }
+                statement {
+                  ip_set_reference_statement {
+                    arn = aws_wafv2_ip_set.this["admin-v6"].arn
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${var.name}-block-enumeration"
+      sampled_requests_enabled   = true
+    }
+  }
+
   # 3. Per-IP rate limit. A real surge is many IPs each making a few
   #    requests; one IP making thousands is a bot.
   rule {

@@ -213,13 +213,27 @@ def main():
     summaries = collect(bucket, run_id)
     if not summaries:
         sys.exit(f"No summaries uploaded (SSM status: {statuses}). Check logs under s3://{bucket}/{run_id}/")
-    result = {"run_id": run_id, "target_rps": generators * per_generator, "k6": aggregate(summaries)}
-    if args.distribution_id:
-        result["cloudfront"] = cloudfront_evidence(args.distribution_id, start, end)
+    result = {
+        "run_id": run_id,
+        "started_utc": start.isoformat(),
+        "ended_utc": end.isoformat(),
+        "target_rps": generators * per_generator,
+        "k6": aggregate(summaries),
+    }
 
+    # Save the k6 numbers now: the results bucket is destroyed with the fleet,
+    # so these must survive even if the CloudWatch step below fails.
     RESULTS_DIR.mkdir(exist_ok=True)
     out = RESULTS_DIR / f"{run_id}.json"
     out.write_text(json.dumps(result, indent=2))
+    print(f"\nk6 results saved to {out}")
+
+    if args.distribution_id:
+        try:
+            result["cloudfront"] = cloudfront_evidence(args.distribution_id, start, end)
+        except Exception as exc:  # keep the k6 evidence regardless
+            print(f"  CloudFront metrics step failed ({exc}); fetch them with the CLI later.")
+        out.write_text(json.dumps(result, indent=2))
     print("\n" + json.dumps({k: v for k, v in result.items()}, indent=2))
     print(f"\nSaved to {out}")
 

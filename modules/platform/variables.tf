@@ -28,7 +28,7 @@ variable "enable_nat_gateway" {
 
 variable "container_image" {
   type    = string
-  default = "wordpress:6.6-php8.2-apache"
+  default = "wordpress:7.1.3-php8.4-apache"
 }
 
 variable "db_instance_count" {

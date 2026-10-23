@@ -46,9 +46,9 @@ variable "origin_verify_secret" {
 }
 
 variable "container_image" {
-  description = "WordPress image. Pin a specific tag; mirror into ECR for production."
+  description = "WordPress image, pinned to an exact patch release. Core updates ship by bumping this tag through the pipeline (never in-container), so every task runs the same version. Mirror into ECR for production."
   type        = string
-  default     = "wordpress:6.6-php8.2-apache"
+  default     = "wordpress:7.1.3-php8.4-apache"
 }
 
 variable "task_cpu" {
